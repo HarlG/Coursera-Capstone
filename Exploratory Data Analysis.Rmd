@@ -1,0 +1,21 @@
+---
+title: "Exploratory Data Analysis"
+author: "Harlan Gillespie"
+date: "29/08/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the dataset
+
+Firstly, we can load the dataset obtained through the previous steps in the capstone project. These steps are outlined in the README.md file.
+
+```{r cars}
+PData <- read.delim("~/Coursera Capstone/PData.txt", stringsAsFactors=TRUE)
+EData <- read.delim("~/Coursera Capstone/featureCount-data-ENTREZ.txt")
+```
+
+
