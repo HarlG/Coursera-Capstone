@@ -9,13 +9,85 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+##Dependencies
+
+```{r Dependencies, message=FALSE}
+library(SummarizedExperiment)
+
+```
+
+
+
+
 ## Load the dataset
 
 Firstly, we can load the dataset obtained through the previous steps in the capstone project. These steps are outlined in the README.md file.
 
 ```{r cars}
-PData <- read.delim("~/Coursera Capstone/PData.txt", stringsAsFactors=TRUE)
-EData <- read.delim("~/Coursera Capstone/featureCount-data-ENTREZ.txt")
+colData <- DataFrame(read.delim("~/Coursera Capstone/PData.txt", stringsAsFactors=TRUE))
+counts <- as.matrix(read.delim("~/Coursera Capstone/featureCount-data-ENTREZ.txt"))
+rownames(counts) = counts[,1]
+counts = counts[,-1]
 ```
+
+Next, it is good practice to organise the dataset into a Summarized Experiment object.
+
+```{r}
+row.data = DataFrame(EData$Geneid)
+data.se = SummarizedExperiment(assays = list(counts = counts),  colData = PData)
+```
+
+Next, we can extract the count data matrix (edata) and the phenotype DataFrame (pdata)
+```{r}
+edata = assays(data.se)[[1]]
+pdata = colData(data.se)
+```
+
+## Exploratory Data Analysis
+
+We can show the sex and race of the samples using a table. There seems to be a bias towards african american (AA) samples over hispanic (HISP).
+
+```{r}
+table(pdata$Sex, pdata$Race)
+```
+
+Next we can look at the overall distribution of the dataset using boxplots.
+
+```{r}
+boxplot(edata, col = 2, range = 0)
+```
+It seems that outliers in the sample A1 that may make the rest of the dataset difficult to visualise. A data transformation is therefore necessary.
+
+```{r}
+pdata
+
+```
+
+```{r}
+summary(edata)
+```
+
+A1's larger variability, demonstrated by the boxplots and the summary table, may be due to its lower RNA integrity number. This will be something to monitor as the project continues.
+
+Next, a log2 transformation can be tested and evaluated using the same boxplot method.
+
+```{r}
+boxplot(log2(edata+1),col=2,range=0)
+```
+
+The data is now much more clear and easier to visualise.
+
+Removing genes that had little or no expression for all datasets is also a good practice for cleaning data.
+
+```{r}
+filt_edata = log2(edata[rowMeans(edata)>1,]+1)
+boxplot(as.matrix(filt_edata),col=2)
+```
+
+
+
+
+
+
 
 
