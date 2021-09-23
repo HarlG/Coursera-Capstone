@@ -2,7 +2,9 @@
 title: "Exploratory Data Analysis"
 author: "Harlan Gillespie"
 date: "29/08/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -42,8 +44,7 @@ counts = counts[,-1]
 Next, it is good practice to organise the dataset into a Summarized Experiment object.
 
 ```{r}
-row.data = DataFrame(EData$Geneid)
-data.se = SummarizedExperiment(assays = list(counts = counts),  colData = PData)
+data.se = SummarizedExperiment(assays = list(counts = counts),  colData = colData)
 ```
 
 Next, we can extract the count data matrix (edata) and the phenotype DataFrame (pdata)
@@ -102,7 +103,7 @@ plot(filt_edata[,3], filt_edata[,4])
 
 
 ```{r}
-heatmap(edata[rowMeans(edata)>500,], scale = "row", density.info =  "none", trace = "none", Rowv = FALSE, Colv = FALSE)
+heatmap(edata[rowMeans(edata)>500,], Rowv = NULL)
 ```
 
 ## Principal Component Analysis
