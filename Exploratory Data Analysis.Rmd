@@ -17,6 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(SummarizedExperiment)
 library(gplots)
 library(DESeq2)
+library(ggplot2)
 
 ```
 
@@ -126,5 +127,16 @@ This PCA plot shows that the first PC forms two clusters predominantly explained
 plot(svd1$v[,1],svd1$v[,2],ylab="2nd PC",xlab="1st PC", col=as.numeric(pdata$RIN))
 ```
 
-This second PCA plot shows the second PC is correlated with the RIN of each sample.
+This second PCA plot shows the second PC is loosely correlated with the RIN of each sample.
+
+
+## Performing PCA with prcomp and ggplot
+
+```{r}
+count_pca = prcomp(filt_edata, scale = TRUE, center = TRUE)
+dat = data.frame(X=count_pca$rotation[,1], Y=count_pca$rotation[,2], age_group = pdata$Group, RIN = pdata$RIN)
+var_explained <- count_pca$sdev^2/sum(count_pca$sdev^2)
+ggplot(dat, aes(x=X, y=Y, shape=age_group, color=RIN)) + geom_point(size=5) + labs(x=paste0("PC1: ",round(var_explained[1]*100,1),"%"),
+       y=paste0("PC2: ",round(var_explained[2]*100,1),"%"))
+```
 
