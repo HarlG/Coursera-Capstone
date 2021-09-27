@@ -1,0 +1,64 @@
+---
+title: "Statistical Analysis"
+author: "Harlan Gillespie"
+date: "27/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Dependencies
+
+```{r Dependencies, message=FALSE}
+library(SummarizedExperiment)
+library(genefilter)
+library(limma)
+
+```
+
+
+## Plot colour palette
+
+```{r}
+tropical=  c('darkorange', 'dodgerblue', 'hotpink', 'limegreen', 'yellow')
+palette(tropical)
+par(pch=19)
+```
+
+
+
+## Linear Regression
+
+The null hypothesis is that there is no relationship between group and gene expression.
+
+```{r}
+mod = model.matrix( ~ pdata$Group + pdata$RIN)
+fit = lmFit(filt_edata, mod)
+eb_fit = eBayes(fit)
+topTable(eb_fit)
+```
+
+
+
+
+
+
+```{r}
+tstats_obj = rowttests(filt_edata,pdata$Group)
+hist(tstats_obj$statistic,col=2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
