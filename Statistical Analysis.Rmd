@@ -15,7 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(SummarizedExperiment)
 library(genefilter)
 library(limma)
-
+library(dbplyr)
+library(ggplot2)
 ```
 
 
@@ -34,22 +35,61 @@ par(pch=19)
 The null hypothesis is that there is no relationship between group and gene expression.
 
 ```{r}
-mod = model.matrix( ~ pdata$Group + pdata$RIN)
-fit = lmFit(filt_edata, mod)
-eb_fit = eBayes(fit)
-topTable(eb_fit)
+mod1 = model.matrix( ~ pdata$Group)
+fit1 = lmFit(filt_edata, mod1)
+fit1 = eBayes(fit1)
+tt = topTable(fit1, number = 21030, p.value = 1)
+genes_logFC = subset(tt, select = c(logFC, P.Value, adj.P.Val))
+
 ```
 
-
-
-
-
+## Create TSV file 
 
 ```{r}
-tstats_obj = rowttests(filt_edata,pdata$Group)
-hist(tstats_obj$statistic,col=2)
+glFC_tsv = genes_logFC
+glFC_tsv = tibble::rownames_to_column(glFC_tsv, "Entrez.ID")
+write.table(glFC_tsv, file = "genes_logFC.tsv", sep = "\t", col.names = colnames(glFC_tsv), row.names = FALSE)
+```
+
+
+## Volcano Plot
+
+Create labels for whether genes are upregulated, downregulated or neither.
+
+```{r}
+genes_logFC$diffexp = "NO"
+genes_logFC$diffexp[genes_logFC$logFC > 1.5 & genes_logFC$P.Value < 0.05] = "UP"
+genes_logFC$diffexp[genes_logFC$logFC < -1.5 & genes_logFC$P.Value < 0.05] = "DOWN"
 
 ```
+
+
+Set colour scheme for differential expression.
+
+```{r}
+mycolors = c("blue", "red", "black")
+names(mycolors) = c("DOWN", "UP", "NO")
+```
+
+Create new column which labels differentially expressed genes
+
+```{r}
+genes_logFC$diffexplab = NA
+genes_logFC$diffexplab[genes_logFC$diffexp != "NO"] = rownames(genes_logFC)[genes_logFC$diffexp != "NO"]
+
+```
+
+
+Create the volcano plot with colour coding and labels
+
+```{r}
+
+ggplot(data=genes_logFC, aes(x=logFC, y=-log10(P.Value), col=diffexp)) + 
+    geom_point()
+    theme_minimal()
+```
+
+
 
 
 
