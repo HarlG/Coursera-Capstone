@@ -34,22 +34,17 @@ par(pch=19)
 
 The null hypothesis is that there is no relationship between group and gene expression.
 
+Model matrix is made to include both the variable of interest, Group, and the covariate RIN.
+
 ```{r}
-mod1 = model.matrix( ~ pdata$Group)
+mod1 = model.matrix( ~ pdata$RIN + pdata$Group)
 fit1 = lmFit(filt_edata, mod1)
 fit1 = eBayes(fit1)
-tt = topTable(fit1, number = 21030, p.value = 1)
+tt = topTable(fit1, number = Inf, coef = 3)
 genes_logFC = subset(tt, select = c(logFC, P.Value, adj.P.Val))
 
 ```
 
-## Create TSV file 
-
-```{r}
-glFC_tsv = genes_logFC
-glFC_tsv = tibble::rownames_to_column(glFC_tsv, "Entrez.ID")
-write.table(glFC_tsv, file = "genes_logFC.tsv", sep = "\t", col.names = colnames(glFC_tsv), row.names = FALSE)
-```
 
 
 ## Volcano Plot
@@ -58,8 +53,8 @@ Create labels for whether genes are upregulated, downregulated or neither.
 
 ```{r}
 genes_logFC$diffexp = "NO"
-genes_logFC$diffexp[genes_logFC$logFC > 1.5 & genes_logFC$P.Value < 0.05] = "UP"
-genes_logFC$diffexp[genes_logFC$logFC < -1.5 & genes_logFC$P.Value < 0.05] = "DOWN"
+genes_logFC$diffexp[genes_logFC$logFC > 1.5 & genes_logFC$adj.P.Val < 0.05] = "UP"
+genes_logFC$diffexp[genes_logFC$logFC < -1.5 & genes_logFC$adj.P.Val < 0.05] = "DOWN"
 
 ```
 
@@ -84,12 +79,19 @@ Create the volcano plot with colour coding and labels
 
 ```{r}
 
-ggplot(data=genes_logFC, aes(x=logFC, y=-log10(P.Value), col=diffexp)) + 
+ggplot(data=genes_logFC, aes(x=logFC, y=-log10(adj.P.Val), col=diffexp)) + 
     geom_point()
     theme_minimal()
 ```
 
 
+## Create TSV file 
+
+```{r}
+glFC_tsv = genes_logFC[,c(1,2,3)]
+glFC_tsv = tibble::rownames_to_column(glFC_tsv, "Entrez.ID")
+write.table(glFC_tsv, file = "genes_logFC.tsv", sep = "\t", col.names = colnames(glFC_tsv), row.names = FALSE)
+```
 
 
 
