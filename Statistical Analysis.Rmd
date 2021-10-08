@@ -2,7 +2,9 @@
 title: "Statistical Analysis"
 author: "Harlan Gillespie"
 date: "27/09/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -28,6 +30,21 @@ palette(tropical)
 par(pch=19)
 ```
 
+## Load the data
+
+Data is loaded  and edata transformed and filtered as in "Exploratory Data Analysis.Rmd".
+
+```{r, echo=FALSE}
+colData <- DataFrame(read.delim("~/Coursera Capstone/PData.txt", stringsAsFactors=TRUE))
+counts <- as.matrix(read.delim("~/Coursera Capstone/featureCount-data-ENTREZ.txt"))
+rownames(counts) = counts[,1]
+counts = counts[,-1]
+data.se = SummarizedExperiment(assays = list(counts = counts),  colData = colData)
+edata = assays(data.se)[[1]]
+pdata = colData(data.se)
+filt_edata = log2(edata[rowMeans(edata)>1,]+1)
+```
+
 
 
 ## Linear Regression
@@ -49,7 +66,7 @@ genes_logFC = subset(tt, select = c(logFC, P.Value, adj.P.Val))
 
 ## Volcano Plot
 
-Create labels for whether genes are upregulated, downregulated or neither.
+Create labels for whether genes are up-regulated, down-regulated or neither. (+-)1.5 was chosen as a cut-off for
 
 ```{r}
 genes_logFC$diffexp = "NO"
@@ -80,7 +97,7 @@ Create the volcano plot with colour coding and labels
 ```{r}
 
 ggplot(data=genes_logFC, aes(x=logFC, y=-log10(adj.P.Val), col=diffexp)) + 
-    geom_point()
+    geom_point() +
     theme_minimal()
 ```
 
@@ -96,6 +113,9 @@ write.table(glFC_tsv, file = "genes_logFC.tsv", sep = "\t", col.names = colnames
 
 
 
+```{r}
+sessionInfo()
+```
 
 
 
