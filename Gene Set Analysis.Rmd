@@ -1,0 +1,29 @@
+---
+title: "Gene Set Analysis"
+author: "Harlan Gillespie"
+date: "21/10/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Dependencies
+
+```{r Dependencies, message=FALSE}
+library(AnnotationHub)
+```
+
+
+## Load the data
+
+```{r}
+df = read.table(file = 'genes_logFC.tsv', sep = '\t', header = TRUE)
+```
+
+## Get Annotations
+```{r}
+ah = AnnotationHub()
+```
+
