@@ -18,12 +18,43 @@ library(AnnotationHub)
 
 ## Load the data
 
+The 'genes_logFC.tsv' file created in Statistical Analysis previously is read and stored as a data.frame.
+
 ```{r}
 df = read.table(file = 'genes_logFC.tsv', sep = '\t', header = TRUE)
 ```
 
 ## Get Annotations
+
+Using AnnotationHub, the data from the roadmap epigenomics project depicting promoter associated histone modification H3K4me3 narrow peaks in human brain samples for adults and fetal samples.
 ```{r}
 ah = AnnotationHub()
+ah = subset(ah, species == "Homo sapiens")
+qhs = query(ah, "H3K4me3")
+qbrain = query(qhs, c("brain", "narrowPeak"))
+qfetal = query(qbrain, "fetal")
+qfetal$tags
+grf = qfetal[[1]]
 ```
+
+We are looking for a consolidated dataset. As 4 out of 6 of our samples are male and sex was not determined in PCA to be significantly associated with expression levels, the male sample, E081, was chosen for the fetal dataset.
+
+```{r}
+qbrain$tags
+gra = qbrain[[7]]
+```
+
+E073 sample was chosen for the adult dataset as it represents H3K4me3 narrow peaks for the dorsolateral prefrontal cortex in ~80 year old males. Our samples are from people aged 36-42 years however this should suffice for comparison to fetal samples.
+
+## Separating fetal and adult differentially expressed genes
+
+```{r}
+up = df[df$logFC > 0,]
+down = df[df$logFC < 0,]
+```
+
+
+
+
+
 
