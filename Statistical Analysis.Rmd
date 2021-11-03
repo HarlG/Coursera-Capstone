@@ -22,17 +22,9 @@ library(ggplot2)
 ```
 
 
-## Plot colour palette
-
-```{r}
-tropical=  c('darkorange', 'dodgerblue', 'hotpink', 'limegreen', 'yellow')
-palette(tropical)
-par(pch=19)
-```
-
 ## Load the data
 
-Data is loaded  and edata transformed and filtered as in "Exploratory Data Analysis.Rmd".
+Data is loaded  and the edata is transformed and filtered as it was in "Exploratory Data Analysis.Rmd".
 
 ```{r, echo=FALSE}
 colData <- DataFrame(read.delim("~/Coursera Capstone/PData.txt", stringsAsFactors=TRUE))
@@ -49,9 +41,9 @@ filt_edata = log2(edata[rowMeans(edata)>1,]+1)
 
 ## Linear Regression
 
-The null hypothesis is that there is no relationship between group and gene expression.
+The null hypothesis is that there is no change in gene expression between fetal and adult (control) groups.
 
-Model matrix is made to include both the variable of interest, Group, and the covariate RIN.
+Model matrix is made to include both the variable of interest, Group, and the covariate RIN. RIN was shown to have some impact on gene expression in the PCA analysis so adjusting for this covariate is appropriate
 
 ```{r}
 mod1 = model.matrix( ~ pdata$RIN + pdata$Group)
@@ -66,7 +58,7 @@ genes_logFC = subset(tt, select = c(logFC, P.Value, adj.P.Val))
 
 ## Volcano Plot
 
-Create labels for whether genes are up-regulated, down-regulated or neither. (+-)1.5 was chosen as a cut-off for
+Create labels for whether genes are up-regulated, down-regulated or neither. (+-)1.5 was chosen as a cut-off for logFC, a relatively low cut-off value. P-values already take into account logFC so filtering by a high logFC is somewhat redundant. Also, a gene with an extremely high logFC does not necessarily suggest a greater effect on a biological function. A small change in expression of a gene on which many processes depend upon could have a greater effect on phenotype than a large change in expression of a gene involved in an island, isolated from significant networks. For this reason, filtering out too many genes with a low logFC value may exclude key findings.
 
 ```{r}
 genes_logFC$diffexp = "NO"
@@ -83,7 +75,7 @@ mycolors = c("blue", "red", "black")
 names(mycolors) = c("DOWN", "UP", "NO")
 ```
 
-Create new column which labels differentially expressed genes
+Create new column which labels deferentially expressed genes
 
 ```{r}
 genes_logFC$diffexplab = NA
@@ -104,14 +96,15 @@ ggplot(data=genes_logFC, aes(x=logFC, y=-log10(adj.P.Val), col=diffexp)) +
 
 ## Create TSV file 
 
+Lastly, we can export the logFC, P.value and adjusted (FDR) P.value of each gene in the form of a TSV file.
+
 ```{r}
 glFC_tsv = genes_logFC[,c(1,2,3)]
 glFC_tsv = tibble::rownames_to_column(glFC_tsv, "Entrez.ID")
 write.table(glFC_tsv, file = "genes_logFC.tsv", sep = "\t", col.names = colnames(glFC_tsv), row.names = FALSE)
 ```
 
-
-
+## Session Info
 
 ```{r}
 sessionInfo()
