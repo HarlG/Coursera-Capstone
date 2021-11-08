@@ -98,39 +98,69 @@ annoData = dropSeqlevels(annoData, "chrM")
 Annotating promoter GRanges.
 
 ```{r}
-adult.brain.anno <- annotatePeakInBatch(adult.brain.prom, 
+adult.prom.anno <- annotatePeakInBatch(adult.brain.prom, 
                                      AnnotationData=annoData, 
                                      output="nearestBiDirectionalPromoters",
                                      bindingRegion=c(-2000, 500))
-fetal.brain.anno <- annotatePeakInBatch(fetal.brain.prom, 
+fetal.prom.anno <- annotatePeakInBatch(fetal.brain.prom, 
                                      AnnotationData=annoData, 
                                      output="nearestBiDirectionalPromoters",
                                      bindingRegion=c(-2000, 500))
-liver.anno <- annotatePeakInBatch(liver.prom, 
+liver.prom.anno <- annotatePeakInBatch(liver.prom, 
                                      AnnotationData=annoData, 
                                      output="nearestBiDirectionalPromoters",
                                      bindingRegion=c(-2000, 500))
 ```
 
-Adding Entrez Gene IDs to annotated promoters
 
 ```{r}
-adult.brain.anno <- addGeneIDs(adult.brain.anno, "org.Hs.eg.db", IDs2Add = "entrez_id")
+adult.prom.genes = as.list(mcols(adult.brain.anno)[7])$feature
+fetal.prom.genes = as.list(mcols(fetal.brain.anno)[7])$feature
+liver.prom.genes = as.list(mcols(liver.anno)[7])$feature
+```
 
-fetal.brain.anno <- addGeneIDs(fetal.brain.anno, "org.Hs.eg.db", IDs2Add = "entrez_id")
 
-liver.anno <- addGeneIDs(liver.anno, , IDs2Add = "entrez_id")
+```{r}
+fetal.exp.genes = list(up[,1])[[1]]
+adult.exp.genes = list(down[,1])[[1]]
+```
 
+
+## Calculating odds ratios
+
+Creating function to calculate odds-ratios
+
+```{r}
+odds_ratio = function(prom, exp, entrez.total) {
+  both = length(intersect(prom, exp))
+  prom.only = length(setdiff(prom, exp))
+  exp.only = length(setdiff(exp, prom))
+  neither = entrez.total - sum(both, prom.only, exp.only)
+  OR = (both/neither)/(exp.only/prom.only)
+  return(OR)
+}
+```
+
+Now, we can use the odds_ratio function to find our six odds ratios to fill a 2x3 matrix representing comparisons between the two expressed gene sets and the three H3K4me3 promoter genesets.
+
+```{r}
+ORMat <- matrix(0, ncol = 2, nrow = 3)
+colnames(ORMat) <- c("fetal.exp", "adult.exp")
+rownames(ORMat) <- c("fetal.prom", "adult.prom", "liver.prom")
 ```
 
 
 
-
-
-
-
-
-
+```{r}
+et = 87000
+ORMat[1,1] = odds_ratio(fetal.prom.genes, fetal.exp.genes, et)
+ORMat[1,2] = odds_ratio(fetal.prom.genes, adult.exp.genes, et)
+ORMat[2,1] = odds_ratio(adult.prom.genes, fetal.exp.genes, et)
+ORMat[2,2] = odds_ratio(adult.prom.genes, adult.exp.genes, et)
+ORMat[3,1] = odds_ratio(liver.prom.genes, fetal.exp.genes, et)
+ORMat[3,2] = odds_ratio(liver.prom.genes, adult.exp.genes, et)
+ORMat
+```
 
 
 
