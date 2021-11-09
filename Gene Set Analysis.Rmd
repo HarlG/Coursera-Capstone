@@ -30,8 +30,8 @@ df = read.table(file = 'genes_logFC.tsv', sep = '\t', header = TRUE)
 Next, the fetal and adult upregulated genes are separated. Adult sample was used as a a control so upregulated fetal genes are labeled "up" and upregulated adult genes are labeled "down".
 
 ```{r}
-up = df[df$logFC > 0,]
-down = df[df$logFC < 0,]
+up = df[df$log2FoldChange > 2 & df$padj < 0.05,]
+down = df[df$log2FoldChange < -2 & df$padj < 0.05,]
 ```
 
 ## Get Annotations

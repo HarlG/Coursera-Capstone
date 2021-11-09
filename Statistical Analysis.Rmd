@@ -17,6 +17,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(SummarizedExperiment)
 library(genefilter)
 library(limma)
+library(DESeq2)
+library(ReportingTools)
 library(dbplyr)
 library(ggplot2)
 ```
@@ -34,12 +36,15 @@ counts = counts[,-1]
 data.se = SummarizedExperiment(assays = list(counts = counts),  colData = colData)
 edata = assays(data.se)[[1]]
 pdata = colData(data.se)
-filt_edata = log2(edata[rowMeans(edata)>1,]+1)
+filt.edata = edata[rowMeans(edata)>10,]
+trans.edata = log2(filt.edata)+1
 ```
 
 
 
 ## Linear Regression
+
+NOTE: Results from this section were not used. 
 
 The null hypothesis is that there is no change in gene expression between fetal and adult (control) groups.
 
@@ -47,23 +52,34 @@ Model matrix is made to include both the variable of interest, Group, and the co
 
 ```{r}
 mod1 = model.matrix( ~ pdata$RIN + pdata$Group)
-fit1 = lmFit(filt_edata, mod1)
+fit1 = lmFit(trans.edata, mod1)
 fit1 = eBayes(fit1)
 tt = topTable(fit1, number = Inf, coef = 3)
-genes_logFC = subset(tt, select = c(logFC, P.Value, adj.P.Val))
+genes_logFC_LM = subset(tt, select = c(logFC, P.Value, adj.P.Val))
 
 ```
 
+## Negative binomial regression using DESeq2
+
+```{r}
+de = DESeqDataSetFromMatrix(as.matrix(filt.edata), pdata, ~Group)
+glm = DESeq(de)
+result.nb = results(glm)
+hist(result.nb$stat, breaks = 50)
+result.df = as.data.frame(result.nb@listData)
+rownames(result.df) = result.nb@rownames
+genes_logFC = subset(result.df, select = c(log2FoldChange, pvalue, padj))
+```
 
 
 ## Volcano Plot
 
-Create labels for whether genes are up-regulated, down-regulated or neither. (+-)1.5 was chosen as a cut-off for logFC, a relatively low cut-off value. P-values already take into account logFC so filtering by a high logFC is somewhat redundant. Also, a gene with an extremely high logFC does not necessarily suggest a greater effect on a biological function. A small change in expression of a gene on which many processes depend upon could have a greater effect on phenotype than a large change in expression of a gene involved in an island, isolated from significant networks. For this reason, filtering out too many genes with a low logFC value may exclude key findings.
+Create labels for whether genes are up-regulated, down-regulated or neither. (+-)2 was chosen as a cut-off for logFC. P-values already take into account logFC so filtering by a high logFC is somewhat redundant. Also, a gene with an extremely high logFC does not necessarily suggest a greater effect on a biological function. A small change in expression of a gene on which many processes depend upon could have a greater effect on phenotype than a large change in expression of a gene involved in an island, isolated from significant networks. For this reason, filtering out too many genes with a low logFC value may exclude key findings.
 
 ```{r}
 genes_logFC$diffexp = "NO"
-genes_logFC$diffexp[genes_logFC$logFC > 1.5 & genes_logFC$adj.P.Val < 0.05] = "UP"
-genes_logFC$diffexp[genes_logFC$logFC < -1.5 & genes_logFC$adj.P.Val < 0.05] = "DOWN"
+genes_logFC$diffexp[genes_logFC$log2FoldChange > 2 & genes_logFC$padj < 0.05] = "UP"
+genes_logFC$diffexp[genes_logFC$log2FoldChange < -2 & genes_logFC$padj < 0.05] = "DOWN"
 
 ```
 
@@ -88,7 +104,7 @@ Create the volcano plot with colour coding and labels
 
 ```{r}
 
-ggplot(data=genes_logFC, aes(x=logFC, y=-log10(adj.P.Val), col=diffexp)) + 
+ggplot(data=genes_logFC, aes(x=log2FoldChange, y=-log10(padj), col=diffexp)) + 
     geom_point() +
     theme_minimal()
 ```
