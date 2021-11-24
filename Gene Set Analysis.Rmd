@@ -32,6 +32,10 @@ Next, the fetal and adult upregulated genes are separated. Adult sample was used
 ```{r}
 up = df[df$log2FoldChange > 2 & df$padj < 0.05,]
 down = df[df$log2FoldChange < -2 & df$padj < 0.05,]
+fetal.exp.genes = as.character(up[,1])
+fetal.exp.genes = fetal.exp.genes[!is.na(fetal.exp.genes)]
+adult.exp.genes = na.omit(as.character(down[,1]))
+adult.exp.genes = adult.exp.genes[!is.na(adult.exp.genes)]
 ```
 
 ## Get Annotations
@@ -50,14 +54,14 @@ We are looking for a consolidated dataset. As 4 out of 6 of our samples are male
 
 ```{r}
 qfetal$tags[1]
-fetal.brain.gr = qfetal[[1]]
+fetal.H3K4.gr = qfetal[[1]]
 ```
 
 E073 sample was chosen for the adult dataset as it represents H3K4me3 narrow peaks for the dorsolateral prefrontal cortex in ~80 year old males. Our samples are from people aged 36-42 years however this should suffice for comparison to fetal samples.
 
 ```{r}
 qbrain$tags[7]
-adult.brain.gr = qbrain[[7]]
+adult.H3K4.gr = qbrain[[7]]
 ```
 
 Now to find adult and fetal peaks in liver tissue which will be used as a control. E066 was chosen as it is consolidated, narrowPeak data from liver samples.
@@ -65,64 +69,39 @@ Now to find adult and fetal peaks in liver tissue which will be used as a contro
 ```{r}
 qliver = query(qH3K4, c("liver", "GRanges", "narrowPeak"))
 qliver$tags[1]
-liver.gr = qliver[[1]]
+liver.H3K4.gr = qliver[[1]]
 ```
-
-
-
-## Finding hg19 promoters that overlap with H3K4me3 peaks and annotation
-
 ```{r}
-refseq <- ah[ah$genome == "hg19" & ah$title == "RefSeq Genes"][[1]]
-prom = promoters(refseq)
-prom = reduce(prom, ignore.strand = TRUE)
+adult.H3K4.gr = keepStandardChromosomes(adult.H3K4.gr, pruning.mode = "coarse")
+adult.H3K4.gr = dropSeqlevels(adult.H3K4.gr, c("chrM", "chrX", "chrY"), pruning.mode = "coarse")
+
+fetal.H3K4.gr = keepStandardChromosomes(fetal.H3K4.gr, pruning.mode = "coarse")
+fetal.H3K4.gr = dropSeqlevels(fetal.H3K4.gr, c("chrM", "chrX", "chrY"), pruning.mode = "coarse")
+
+liver.H3K4.gr = keepStandardChromosomes(liver.H3K4.gr, pruning.mode = "coarse")
+liver.H3K4.gr = dropSeqlevels(liver.H3K4.gr, c("chrM", "chrX", "chrY"), pruning.mode = "coarse")
 ```
 
-Find overlaps
 
-```{r}
-adult.brain.prom = subsetByOverlaps(adult.brain.gr, prom)
-fetal.brain.prom = subsetByOverlaps(fetal.brain.gr, prom)
-liver.prom = subsetByOverlaps(liver.gr, prom)
-```
 
-Preparation of annotation data.
+## Finding hg19 promoters of fetal and adult DEGs
+
 
 ```{r}
 txdb = TxDb.Hsapiens.UCSC.hg19.knownGene
-annoData = toGRanges(txdb, feature = "gene", single.strand.genes.only = FALSE)
-annoData = keepStandardChromosomes(annoData, pruning.mode = "coarse")
-annoData = dropSeqlevels(annoData, "chrM")
-```
+all.prom = promoters(genes(txdb))
 
-Annotating promoter GRanges.
+fetal.exp.genes = fetal.exp.genes[!fetal.exp.genes %in% setdiff(fetal.exp.genes, all.prom$gene_id)]
+adult.exp.genes = adult.exp.genes[!adult.exp.genes %in% setdiff(adult.exp.genes, all.prom$gene_id)]
 
-```{r}
-adult.prom.anno <- annotatePeakInBatch(adult.brain.prom, 
-                                     AnnotationData=annoData, 
-                                     output="nearestBiDirectionalPromoters",
-                                     bindingRegion=c(-2000, 500))
-fetal.prom.anno <- annotatePeakInBatch(fetal.brain.prom, 
-                                     AnnotationData=annoData, 
-                                     output="nearestBiDirectionalPromoters",
-                                     bindingRegion=c(-2000, 500))
-liver.prom.anno <- annotatePeakInBatch(liver.prom, 
-                                     AnnotationData=annoData, 
-                                     output="nearestBiDirectionalPromoters",
-                                     bindingRegion=c(-2000, 500))
-```
+fetal.prom = all.prom[fetal.exp.genes]
+adult.prom = all.prom[adult.exp.genes]
 
+fetal.prom = keepStandardChromosomes(fetal.prom, pruning.mode = "coarse")
+fetal.prom = dropSeqlevels(fetal.prom, c("chrM", "chrX", "chrY"), pruning.mode = "coarse")
 
-```{r}
-adult.prom.genes = as.list(mcols(adult.brain.anno)[7])$feature
-fetal.prom.genes = as.list(mcols(fetal.brain.anno)[7])$feature
-liver.prom.genes = as.list(mcols(liver.anno)[7])$feature
-```
-
-
-```{r}
-fetal.exp.genes = list(up[,1])[[1]]
-adult.exp.genes = list(down[,1])[[1]]
+adult.prom = keepStandardChromosomes(adult.prom, pruning.mode = "coarse")
+adult.prom = dropSeqlevels(adult.prom, c("chrM", "chrX", "chrY"), pruning.mode = "coarse")
 ```
 
 
@@ -131,12 +110,23 @@ adult.exp.genes = list(down[,1])[[1]]
 Creating function to calculate odds-ratios
 
 ```{r}
-odds_ratio = function(prom, exp, entrez.total) {
-  both = length(intersect(prom, exp))
-  prom.only = length(setdiff(prom, exp))
-  exp.only = length(setdiff(exp, prom))
-  neither = entrez.total - sum(both, prom.only, exp.only)
-  OR = (both/neither)/(exp.only/prom.only)
+odds_ratio = function(H3K4, prom, all.prom) {
+  prom = reduce(prom, ignore.strand = TRUE)
+  H3K4 = reduce(H3K4)
+  all.prom = reduce(all.prom, ignore.strand = TRUE)
+  
+  both = intersect(H3K4, prom)
+  H3K4.only = setdiff(H3K4, both)
+  prom.only = setdiff(prom, both)
+  
+  om <- matrix(0, ncol = 2, nrow = 2)
+  om[1,1] <- sum(width(both))
+  om[1,2] <- sum(width(prom.only))
+  om[2,1] <- sum(width(H3K4.only))
+  om[2,2] <- 1.5*10^9 - sum(om)
+  
+  OR = (om[1,1]*om[2,2])/(om[1,2]*om[2,1])
+  om = round(om / 10^6, 2)
   return(OR)
 }
 ```
@@ -145,22 +135,20 @@ Now, we can use the odds_ratio function to find our six odds ratios to fill a 2x
 
 ```{r}
 ORMat <- matrix(0, ncol = 2, nrow = 3)
-colnames(ORMat) <- c("fetal.exp", "adult.exp")
-rownames(ORMat) <- c("fetal.prom", "adult.prom", "liver.prom")
+colnames(ORMat) <- c("fetal.prom", "adult.prom")
+rownames(ORMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
 ```
 
 
 
 ```{r}
-et = 87000
-ORMat[1,1] = odds_ratio(fetal.prom.genes, fetal.exp.genes, et)
-ORMat[1,2] = odds_ratio(fetal.prom.genes, adult.exp.genes, et)
-ORMat[2,1] = odds_ratio(adult.prom.genes, fetal.exp.genes, et)
-ORMat[2,2] = odds_ratio(adult.prom.genes, adult.exp.genes, et)
-ORMat[3,1] = odds_ratio(liver.prom.genes, fetal.exp.genes, et)
-ORMat[3,2] = odds_ratio(liver.prom.genes, adult.exp.genes, et)
+ORMat[1,1] = odds_ratio(fetal.H3K4.gr, fetal.prom, all.prom)
+ORMat[1,2] = odds_ratio(fetal.H3K4.gr, adult.prom, all.prom)
+ORMat[2,1] = odds_ratio(adult.H3K4.gr, fetal.prom, all.prom)
+ORMat[2,2] = odds_ratio(adult.H3K4.gr, adult.prom, all.prom)
+ORMat[3,1] = odds_ratio(liver.H3K4.gr, fetal.prom, all.prom)
+ORMat[3,2] = odds_ratio(liver.H3K4.gr, adult.prom, all.prom)
 ORMat
 ```
-
 
 
