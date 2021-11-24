@@ -119,15 +119,15 @@ odds_ratio = function(H3K4, prom, all.prom) {
   H3K4.only = setdiff(H3K4, both)
   prom.only = setdiff(prom, both)
   
-  om <- matrix(0, ncol = 2, nrow = 2)
-  om[1,1] <- sum(width(both))
-  om[1,2] <- sum(width(prom.only))
-  om[2,1] <- sum(width(H3K4.only))
-  om[2,2] <- 1.5*10^9 - sum(om)
-  
-  OR = (om[1,1]*om[2,2])/(om[1,2]*om[2,1])
-  om = round(om / 10^6, 2)
-  return(OR)
+  om = matrix(0, ncol = 2, nrow = 2)
+  om[1,1] = sum(width(both))
+  om[1,2] = sum(width(prom.only))
+  om[2,1] = sum(width(H3K4.only))
+  om[2,2] = 1.5*10^9 - sum(om)
+
+  output = fisher.test(om)
+
+  return(output)
 }
 ```
 
@@ -137,18 +137,41 @@ Now, we can use the odds_ratio function to find our six odds ratios to fill a 2x
 ORMat <- matrix(0, ncol = 2, nrow = 3)
 colnames(ORMat) <- c("fetal.prom", "adult.prom")
 rownames(ORMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
+
+PVMat <- matrix(0, ncol = 2, nrow = 3)
+colnames(PVMat) <- c("fetal.prom", "adult.prom")
+rownames(PVMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
+```
+
+
+```{r}
+or11 = odds_ratio(fetal.H3K4.gr, fetal.prom, all.prom)
+or12 = odds_ratio(fetal.H3K4.gr, adult.prom, all.prom)
+or21 = odds_ratio(adult.H3K4.gr, fetal.prom, all.prom)
+or22 = odds_ratio(adult.H3K4.gr, adult.prom, all.prom)
+or31 = odds_ratio(liver.H3K4.gr, fetal.prom, all.prom)
+or32 = odds_ratio(liver.H3K4.gr, adult.prom, all.prom)
 ```
 
 
 
 ```{r}
-ORMat[1,1] = odds_ratio(fetal.H3K4.gr, fetal.prom, all.prom)
-ORMat[1,2] = odds_ratio(fetal.H3K4.gr, adult.prom, all.prom)
-ORMat[2,1] = odds_ratio(adult.H3K4.gr, fetal.prom, all.prom)
-ORMat[2,2] = odds_ratio(adult.H3K4.gr, adult.prom, all.prom)
-ORMat[3,1] = odds_ratio(liver.H3K4.gr, fetal.prom, all.prom)
-ORMat[3,2] = odds_ratio(liver.H3K4.gr, adult.prom, all.prom)
+ORMat[1,1] = unname(or11$estimate)
+ORMat[1,2] = unname(or12$estimate)
+ORMat[2,1] = unname(or21$estimate)
+ORMat[2,2] = unname(or22$estimate)
+ORMat[3,1] = unname(or31$estimate)
+ORMat[3,2] = unname(or32$estimate)
 ORMat
 ```
 
+```{r}
+PVMat[1,1] = or11$p.value
+PVMat[1,2] = or11$p.value
+PVMat[2,1] = or11$p.value
+PVMat[2,2] = or11$p.value
+PVMat[3,1] = or11$p.value
+PVMat[3,2] = or11$p.value
+PVMat
+```
 
