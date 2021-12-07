@@ -21,7 +21,7 @@ library(org.Hs.eg.db)
 
 ## Load the data
 
-The 'genes_logFC.tsv' file created in Statistical Analysis previously is read and stored as a data.frame.
+The 'genes_logFC.tsv' file created in "Statistical Analysis.Rmd" previously is read and stored as a data.frame.
 
 ```{r}
 df = read.table(file = 'genes_logFC.tsv', sep = '\t', header = TRUE)
@@ -86,6 +86,8 @@ liver.H3K4.gr = dropSeqlevels(liver.H3K4.gr, c("chrM", "chrX", "chrY"), pruning.
 
 ## Finding hg19 promoters of fetal and adult DEGs
 
+Promoters of the hg19 reference genome are stored as a GRanges object. These are matched to the fetal and adult differentially expressed gene list (Entrez IDs) and two sets of promoters GRanges are formed for each gene list.
+
 
 ```{r}
 txdb = TxDb.Hsapiens.UCSC.hg19.knownGene
@@ -107,7 +109,7 @@ adult.prom = dropSeqlevels(adult.prom, c("chrM", "chrX", "chrY"), pruning.mode =
 
 ## Calculating odds ratios
 
-Creating function to calculate odds-ratios
+Creating function to calculate odds-ratios comparing the number of overlapping nucleotides between H3K4me3 peaks and promoters of differentially expressed genes. Here we use the fisher exact test.
 
 ```{r}
 odds_ratio = function(H3K4, prom, all.prom) {
@@ -131,17 +133,7 @@ odds_ratio = function(H3K4, prom, all.prom) {
 }
 ```
 
-Now, we can use the odds_ratio function to find our six odds ratios to fill a 2x3 matrix representing comparisons between the two expressed gene sets and the three H3K4me3 promoter genesets.
 
-```{r}
-ORMat <- matrix(0, ncol = 2, nrow = 3)
-colnames(ORMat) <- c("fetal.prom", "adult.prom")
-rownames(ORMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
-
-PVMat <- matrix(0, ncol = 2, nrow = 3)
-colnames(PVMat) <- c("fetal.prom", "adult.prom")
-rownames(PVMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
-```
 
 
 ```{r}
@@ -153,7 +145,19 @@ or31 = odds_ratio(liver.H3K4.gr, fetal.prom, all.prom)
 or32 = odds_ratio(liver.H3K4.gr, adult.prom, all.prom)
 ```
 
+Two 2x3 matricies are created to store both odds ratios and p-values representing comparisons between the two expressed gene sets and the three H3K4me3 peak genesets.
 
+```{r}
+ORMat <- matrix(0, ncol = 2, nrow = 3)
+colnames(ORMat) <- c("fetal.prom", "adult.prom")
+rownames(ORMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
+
+PVMat <- matrix(0, ncol = 2, nrow = 3)
+colnames(PVMat) <- c("fetal.prom", "adult.prom")
+rownames(PVMat) <- c("fetal.H3K4", "adult.H3K4", "liver.H3K4")
+```
+
+Now, we can fill the odds ratio matrix..
 
 ```{r}
 ORMat[1,1] = unname(or11$estimate)
@@ -165,6 +169,8 @@ ORMat[3,2] = unname(or32$estimate)
 ORMat
 ```
 
+.. and the P-value matrix.
+
 ```{r}
 PVMat[1,1] = or11$p.value
 PVMat[1,2] = or11$p.value
@@ -173,5 +179,9 @@ PVMat[2,2] = or11$p.value
 PVMat[3,1] = or11$p.value
 PVMat[3,2] = or11$p.value
 PVMat
+```
+
+```{r}
+sessionInfo()
 ```
 
